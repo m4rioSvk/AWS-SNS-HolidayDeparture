@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -e
+
+echo "== Building SAM application"
+
+sam build \
+--template-file template.yaml \
+--use-container
+
+echo "== Build complete"

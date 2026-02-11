@@ -1,0 +1,108 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Calendar Notification System for Departure Reminders
+
+Parameters:
+  EmailAddress:
+    Type: String
+    Description: Email address to receive notifications
+    Default: sevcik.majo@gmail.com
+  
+  NotificationSchedule:
+    Type: String
+    Description: Cron expression for when to check and send notifications
+    Default: "cron(0 9 * * ? *)"  # Every day at 9 AM UTC
+
+Resources:
+  # SNS Topic for sending notifications
+  DepartureNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: DepartureNotifications
+      DisplayName: Country Departure Reminders
+      Subscription:
+        - Endpoint: !Ref EmailAddress
+          Protocol: email
+
+# DynamoDB table to store departure events
+  DepartureCalendarTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: DepartureCalendar
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: eventId
+          AttributeType: S
+        - AttributeName: departureDate
+          AttributeType: S
+      KeySchema:
+        - AttributeName: eventId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: DateIndex
+          KeySchema:
+            - AttributeName: departureDate
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  # Lambda function to check calendar and send notifications
+  NotificationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: DepartureNotificationChecker
+      CodeUri: ./src
+      Handler: notification_handler.handler
+      Runtime: python3.12
+      Timeout: 60
+      MemorySize: 256
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref DepartureNotificationTopic
+          TABLE_NAME: !Ref DepartureCalendarTable
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt DepartureNotificationTopic.TopicName
+        - DynamoDBReadPolicy:
+            TableName: !Ref DepartureCalendarTable
+      Events:
+        DailyCheck:
+          Type: Schedule
+          Properties:
+            Schedule: !Ref NotificationSchedule
+            Description: Daily check for upcoming departures
+            Enabled: true
+
+  # Lambda function to add/manage departure events
+  ManageEventsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ManageDepartureEvents
+      CodeUri: ./src
+      Handler: manage_events.handler
+      Runtime: python3.12
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref DepartureCalendarTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DepartureCalendarTable
+
+Outputs:
+  SNSTopicArn:
+    Description: ARN of the SNS topic for notifications
+    Value: !Ref DepartureNotificationTopic
+  
+  DynamoDBTableName:
+    Description: Name of the DynamoDB table
+    Value: !Ref DepartureCalendarTable
+  
+  NotificationFunctionArn:
+    Description: ARN of the notification checker function
+    Value: !GetAtt NotificationFunction.Arn
+  
+  ManageEventsFunctionArn:
+    Description: ARN of the event management function
+    Value: !GetAtt ManageEventsFunction.Arn

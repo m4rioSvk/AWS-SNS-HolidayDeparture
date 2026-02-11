@@ -1,0 +1,36 @@
+version = 0.1
+
+[default]
+[default.global.parameters]
+stack_name = "default11"
+region = "ap-northeast-3"
+
+[default.build.parameters]
+cached = true
+parallel = true
+
+[default.validate.parameters]
+lint = true
+
+[default.deploy.parameters]
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = true
+resolve_s3 = true
+region = "ap-northeast-3"
+parameter_overrides = "EmailAddress=your-email@example.com",
+stack_name = "SNS-Japan"
+s3_prefix = "SNS-Japan"
+disable_rollback = true
+image_repositories = []
+
+[default.package.parameters]
+resolve_s3 = true
+
+[default.sync.parameters]
+watch = true
+
+[default.local_start_api.parameters]
+warm_containers = "EAGER"
+
+[default.local_start_lambda.parameters]
+warm_containers = "EAGER"
