@@ -73,8 +73,7 @@ This is a personal project, but suggestions and improvements are welcome! Feel f
 
 ## ⭐ Acknowledgments
 
-Built with AWS SAM, Python, and a desire to never miss another flight!
+Built with AWS SAM, Python
 
 ---
 
-*Made with ❤️ for travelers who forget things*
